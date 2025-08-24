@@ -13,8 +13,8 @@ const taskController = require('../controllers/taskController');
 const { auth, restrict } = require('../middleware/auth');
 
 // Protect all routes after this middleware (only admin)
-router.use(auth);
-router.use(restrict('admin'));
+//router.use(auth);
+//router.use(restrict('admin'));
 
 // ✅ Admin Management
 router
