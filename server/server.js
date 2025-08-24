@@ -9,8 +9,8 @@ const clientRoutes = require('./routes/client');
 const { MONGODB_URI } = require('./config/db'); // your config file exporting the URI
 
 
-const app = express.json();
-
+const app = express();
+app.use(express.json());
 // Connect to MongoDB
 mongoose.connect(MONGODB_URI)
   .then(() => {
