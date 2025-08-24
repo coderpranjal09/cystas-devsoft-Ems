@@ -25,6 +25,9 @@ mongoose.connect(MONGODB_URI)
     }));
 
     // Routes
+    app.use('/',(req,res)=>{
+      res.send('server is running');
+    })
     app.use('/api/admin', adminRoutes);
     app.use('/api/auth', authRoutes);
     app.use('/api/client', clientRoutes);
