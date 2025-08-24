@@ -20,7 +20,7 @@ mongoose.connect(MONGODB_URI)
     app.use(express.json());
 
     app.use(cors({
-      origin: ['http://localhost:5173', 'https://yourproductiondomain.com'],
+      origin: ['http://localhost:5173', 'https://cystas-ems.netlify.app'],
       credentials: true,
     }));
 
