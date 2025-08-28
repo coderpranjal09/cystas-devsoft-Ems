@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://cystas-ems.vercel.app/api', // Update with your backend URL
+  baseURL: 'https://cystas-devsoft-ems-software.vercel.app/', // Update with your backend URL
 });
 
 // Request interceptor to add auth token
