@@ -20,19 +20,19 @@ app.use(cors({
   credentials: true
 }));
 
-// ✅ API Routes
+// ✅ Root Route (exact /) - moved up to avoid being caught by other middleware
+app.get('/', (req, res) => {
+  res.send('✅ Server is running...');
+});
+
+// ✅ API Routes - ensure these are correctly structured in their files
 app.use('/api/admin', adminRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/client', clientRoutes);
 app.use('/api/employee', employeeRoutes);
 
-// ✅ Root Route (exact /)
-app.get('/', (req, res) => {
-  res.send('✅ Server is running...');
-});
-
 // ✅ 404 Handler (must be after all routes)
-app.use((req, res) => {
+app.use('*', (req, res) => {
   res.status(404).json({ status: 'fail', message: 'Route not found' });
 });
 
