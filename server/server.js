@@ -16,14 +16,18 @@ mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log('MongoDB connected');
 
-    // Middleware
-    app.use(express.json());
 
     app.use(cors({
       origin: ['http://localhost:5173', 'https://cystas-ems.netlify.app'],
       credentials: true,
     }));
 
+    
+// Vercel requires exporting app instead of listening
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+}
     
     app.use('/api/admin', adminRoutes);
     app.use('/api/auth', authRoutes);
