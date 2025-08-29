@@ -26,7 +26,7 @@ const Attendance = () => {
       try {
         setFetching(true);
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:3000/api/admin/users', {
+        const response = await fetch('https://cystas-ems.vercel.app/api/admin/users', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -52,7 +52,7 @@ const Attendance = () => {
     const fetchRecentAttendance = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:3000/api/admin/attendance?limit=5', {
+        const response = await fetch('https://cystas-ems.vercel.app/api/admin/attendance?limit=5', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -119,7 +119,7 @@ const Attendance = () => {
         };
       });
 
-      const response = await fetch('http://localhost:3000/api/admin/attendance/multiple', {
+      const response = await fetch('https://cystas-ems.vercel.app/api/admin/attendance/multiple', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

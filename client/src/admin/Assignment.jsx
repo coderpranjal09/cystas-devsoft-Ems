@@ -74,7 +74,7 @@ const Assignment = () => {
     const fetchEmployees = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch("http://localhost:3000/api/admin/users", {
+        const response = await fetch("https://cystas-ems.vercel.app/api/admin/users", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -98,7 +98,7 @@ const Assignment = () => {
     try {
       setFetching(true);
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:3000/api/admin/tasks", {
+      const response = await fetch("https://cystas-ems.vercel.app/api/admin/tasks", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -137,7 +137,7 @@ const Assignment = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:3000/api/admin/tasks", {
+      const response = await fetch("https://cystas-ems.vercel.app/api/admin/tasks", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -178,7 +178,7 @@ const Assignment = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:3000/api/admin/tasks/${taskId}/evaluate`,
+        `https://cystas-ems.vercel.app/api/admin/tasks/${taskId}/evaluate`,
         {
           method: "POST",
           headers: {
@@ -215,7 +215,7 @@ const Assignment = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:3000/api/admin/tasks/${taskId}`,
+        `https://cystas-ems.vercel.app/api/admin/tasks/${taskId}`,
         {
           method: "DELETE",
           headers: {

@@ -28,7 +28,7 @@ const TaskPage = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3000/api/employee/tasks/me', {
+      const response = await fetch('https://cystas-ems.vercel.app/api/employee/tasks/me', {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -81,7 +81,7 @@ const TaskPage = () => {
     setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3000/api/employee/tasks/${selectedTask._id}/submit`, {
+      const response = await fetch(`https://cystas-ems.vercel.app/api/employee/tasks/${selectedTask._id}/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
