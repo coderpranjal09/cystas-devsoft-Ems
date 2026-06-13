@@ -125,34 +125,35 @@ exports.generatePerformanceReport = async (req, res) => {
       });
     }
 
-    // Get ALL users with role 'client' (since your users have role 'client')
-    const users = await User.find({
-      role: 'client',  // Changed from ['employee', 'client'] to just 'client'
-      isActive: true
+    // Get all clients from your database
+    const clients = await User.find({ 
+      role: 'client',
+      isActive: true 
     });
 
-    if (users.length === 0) {
+    if (clients.length === 0) {
       return res.status(404).json({ 
         success: false, 
         message: 'No clients found in the system. Please add clients first.' 
       });
     }
 
-    console.log(`Found ${users.length} clients for report generation`);
+    console.log(`Found ${clients.length} clients for report generation`);
+    console.log('Clients:', clients.map(c => ({ name: c.name, email: c.email })));
 
     const reportData = [];
     
-    for (const user of users) {
+    for (const client of clients) {
       const performance = await calculateEmployeePerformance(
-        user._id,
+        client._id,
         new Date(startDate),
         new Date(endDate)
       );
       
       reportData.push({
-        employee: user._id,
-        employeeName: user.name,
-        employeeRole: user.role,
+        employee: client._id,
+        employeeName: client.name,
+        employeeRole: client.role,
         ...performance
       });
     }
@@ -181,7 +182,7 @@ exports.generatePerformanceReport = async (req, res) => {
   }
 };
 
-// Also update the attendance controller to include clients
+// Keep other functions (publishReport, unpublishReport, etc.) the same
 exports.publishReport = async (req, res) => {
   try {
     const { reportId } = req.params;
