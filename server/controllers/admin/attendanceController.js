@@ -296,10 +296,11 @@ exports.checkExistingAttendance = async (req, res) => {
     handleError(res, 500, 'Internal server error');
   }
 };
+
+
 // server/controllers/admin/attendanceController.js
 
-const User = require('../../models/User'); // ✅ THIS LINE WAS MISSING - FIXES "User is not defined"
-
+const User = require('../../models/User');
 
 // Get all employees monthly attendance
 exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
@@ -308,7 +309,7 @@ exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
     
     console.log(`=== Fetching Attendance for ${year}-${month} ===`);
     
-    // Get all clients only (not admins)
+    // Get all clients only
     const users = await User.find({ 
       role: 'client'
     });
@@ -325,7 +326,6 @@ exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
     for (const user of users) {
       const startDate = new Date(year, month - 1, 1);
       const endDate = new Date(year, month, 0);
-      const daysInMonth = endDate.getDate();
       
       // Get all attendance records for this user in the month
       const attendance = await Attendance.find({
@@ -337,12 +337,13 @@ exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
       let presentDays = 0;
       let absentDays = 0;
       let halfDays = 0;
+      let leaveDays = 0;
       let totalWorkingHours = 0;
       
       attendance.forEach(record => {
         if (record.status === 'present') {
           presentDays++;
-          // Calculate working hours if checkIn and checkOut exist
+          // Calculate working hours
           if (record.checkIn && record.checkOut) {
             const checkInTime = new Date(record.checkIn);
             const checkOutTime = new Date(record.checkOut);
@@ -353,30 +354,38 @@ exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
           absentDays++;
         } else if (record.status === 'half_day') {
           halfDays++;
-          // Half day counts as 0.5 present for percentage
           if (record.checkIn && record.checkOut) {
             const checkInTime = new Date(record.checkIn);
             const checkOutTime = new Date(record.checkOut);
             const hoursWorked = (checkOutTime - checkInTime) / (1000 * 60 * 60);
             totalWorkingHours += hoursWorked;
           }
+        } else if (record.status === 'leave') {
+          leaveDays++;
         }
       });
       
-      // Calculate attendance percentage (half day counts as 0.5)
+      // Total days = Present + Absent + Half Days + Leave Days (Not Marked is NOT counted)
+      const totalDaysInMonth = endDate.getDate();
+      const totalMarkedDays = presentDays + absentDays + halfDays + leaveDays;
+      const notMarkedDays = totalDaysInMonth - totalMarkedDays;
+      
+      // Calculate attendance percentage (Present + Half*0.5) / (Present + Absent + Half) * 100
       const totalPresentEquivalent = presentDays + (halfDays * 0.5);
-      const attendancePercentage = daysInMonth > 0 
-        ? Math.round((totalPresentEquivalent / daysInMonth) * 100)
+      const totalWorkingDays = presentDays + absentDays + halfDays;
+      const attendancePercentage = totalWorkingDays > 0 
+        ? Math.round((totalPresentEquivalent / totalWorkingDays) * 100)
         : 0;
       
       attendanceData.push({
         clientName: user.name,
-        attendancePercentage: `${attendancePercentage}%`,
-        totalWorkingHours: totalWorkingHours.toFixed(1),
-        presentDays: presentDays,
-        absentDays: absentDays,
-        halfDays: halfDays,
-        totalDaysInMonth: daysInMonth
+        present: presentDays,
+        absent: absentDays,
+        halfDay: halfDays,
+        leave: leaveDays,
+        notMarked: notMarkedDays,
+        attendancePercentage: attendancePercentage,
+        totalWorkingHours: totalWorkingHours.toFixed(1)
       });
     }
     
@@ -421,6 +430,7 @@ exports.getEmployeeMonthlyAttendance = async (req, res) => {
     let presentDays = 0;
     let absentDays = 0;
     let halfDays = 0;
+    let leaveDays = 0;
     let totalWorkingHours = 0;
     
     for (let i = 1; i <= daysInMonth; i++) {
@@ -431,6 +441,8 @@ exports.getEmployeeMonthlyAttendance = async (req, res) => {
       
       let status = 'not_marked';
       let workingHours = 0;
+      let checkInTimeStr = null;
+      let checkOutTimeStr = null;
       
       if (attendanceRecord) {
         status = attendanceRecord.status;
@@ -442,6 +454,8 @@ exports.getEmployeeMonthlyAttendance = async (req, res) => {
             const checkOutTime = new Date(attendanceRecord.checkOut);
             workingHours = (checkOutTime - checkInTime) / (1000 * 60 * 60);
             totalWorkingHours += workingHours;
+            checkInTimeStr = checkInTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            checkOutTimeStr = checkOutTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           }
         } else if (status === 'absent') {
           absentDays++;
@@ -452,7 +466,11 @@ exports.getEmployeeMonthlyAttendance = async (req, res) => {
             const checkOutTime = new Date(attendanceRecord.checkOut);
             workingHours = (checkOutTime - checkInTime) / (1000 * 60 * 60);
             totalWorkingHours += workingHours;
+            checkInTimeStr = checkInTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            checkOutTimeStr = checkOutTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           }
+        } else if (status === 'leave') {
+          leaveDays++;
         }
       }
       
@@ -461,15 +479,20 @@ exports.getEmployeeMonthlyAttendance = async (req, res) => {
         day: currentDate.toLocaleDateString('en-US', { weekday: 'short' }),
         status: status,
         workingHours: workingHours.toFixed(1),
-        checkIn: attendanceRecord?.checkIn ? new Date(attendanceRecord.checkIn).toLocaleTimeString() : null,
-        checkOut: attendanceRecord?.checkOut ? new Date(attendanceRecord.checkOut).toLocaleTimeString() : null
+        checkIn: checkInTimeStr,
+        checkOut: checkOutTimeStr
       });
     }
     
-    // Calculate attendance percentage
+    // Total days calculation
+    const totalMarkedDays = presentDays + absentDays + halfDays + leaveDays;
+    const notMarkedDays = daysInMonth - totalMarkedDays;
+    
+    // Calculate attendance percentage (based only on marked days)
     const totalPresentEquivalent = presentDays + (halfDays * 0.5);
-    const attendancePercentage = daysInMonth > 0 
-      ? Math.round((totalPresentEquivalent / daysInMonth) * 100)
+    const totalWorkingDays = presentDays + absentDays + halfDays;
+    const attendancePercentage = totalWorkingDays > 0 
+      ? Math.round((totalPresentEquivalent / totalWorkingDays) * 100)
       : 0;
     
     res.json({
@@ -483,12 +506,13 @@ exports.getEmployeeMonthlyAttendance = async (req, res) => {
           totalDays: daysInMonth
         },
         summary: {
-          attendancePercentage: `${attendancePercentage}%`,
-          totalWorkingHours: totalWorkingHours.toFixed(1),
-          presentDays: presentDays,
-          absentDays: absentDays,
-          halfDays: halfDays,
-          notMarkedDays: daysInMonth - (presentDays + absentDays + halfDays)
+          present: presentDays,
+          absent: absentDays,
+          halfDay: halfDays,
+          leave: leaveDays,
+          notMarked: notMarkedDays,
+          attendancePercentage: attendancePercentage,
+          totalWorkingHours: totalWorkingHours.toFixed(1)
         },
         dailyAttendance: dailyAttendance
       }
