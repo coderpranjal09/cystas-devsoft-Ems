@@ -36,13 +36,17 @@ const ClientDashboard = () => {
           api.get(`/client/attendance?year=${currentYear}&month=${currentMonth}`)
         ]);
 
+        console.log('Tasks Response:', tasksRes.data);
+        console.log('Projects Response:', projectsRes.data);
+        console.log('Attendance Response:', attendanceRes.data);
+
         // Attendance Calculation
         let attendancePercentage = 0;
         if (attendanceRes.data?.data?.attendance) {
           const attendanceRecords = attendanceRes.data.data.attendance;
           const presentDays = attendanceRecords.filter(record => record.status === 'present').length;
           const absentDays = attendanceRecords.filter(record => record.status === 'absent').length;
-          const halfDays = attendanceRecords.filter(record => record.status === 'half-day').length;
+          const halfDays = attendanceRecords.filter(record => record.status === 'half-day' || record.status === 'half_day').length;
 
           const totalAttendedDays = presentDays + (halfDays * 0.5);
           const totalWorkingDays = totalAttendedDays + absentDays;
@@ -53,16 +57,38 @@ const ClientDashboard = () => {
         }
 
         const dashboardStats = statsRes.data?.data || {};
-        const projectsData = projectsRes.data?.data?.projects || [];
-        const tasksData = tasksRes.data?.data?.tasks || [];
+        const projectsData = projectsRes.data?.data?.projects || projectsRes.data?.data || [];
+        const tasksData = tasksRes.data?.data?.tasks || tasksRes.data?.data || [];
+
+        console.log('Tasks Data:', tasksData);
         
+        // Calculate average rating from completed tasks - FIXED: Check both rating and evaluation.rating
         const completedTasksList = tasksData.filter(t => t.status === 'completed' || t.status === 'evaluated');
-        const averageRating = completedTasksList.length > 0
-          ? (completedTasksList.reduce((sum, t) => sum + (t.rating || 0), 0) / completedTasksList.length).toFixed(1)
+        
+        let totalRating = 0;
+        let ratedTasksCount = 0;
+        
+        completedTasksList.forEach(task => {
+          // Check if rating exists directly or in evaluation object
+          let taskRating = null;
+          if (task.rating) {
+            taskRating = task.rating;
+          } else if (task.evaluation && task.evaluation.rating) {
+            taskRating = task.evaluation.rating;
+          }
+          
+          if (taskRating !== null && taskRating > 0) {
+            totalRating += taskRating;
+            ratedTasksCount++;
+          }
+        });
+        
+        const averageRating = ratedTasksCount > 0 
+          ? (totalRating / ratedTasksCount).toFixed(1)
           : 0;
 
         const activeProjectsCount = projectsData.filter(p => p.status === 'active').length;
-        const completedTasksCount = tasksData.filter(t => t.status === 'completed' || t.status === 'evaluated').length;
+        const completedTasksCount = completedTasksList.length;
 
         setStats({
           totalProjects: dashboardStats.projectStats?.total || projectsData.length,
@@ -70,11 +96,20 @@ const ClientDashboard = () => {
           completedTasks: completedTasksCount,
           totalTasks: tasksData.length,
           attendancePercentage,
-          averageRating
+          averageRating: parseFloat(averageRating)
         });
 
         setTasks(tasksData);
         setProjects(projectsData);
+        
+        console.log('Stats:', {
+          totalProjects: dashboardStats.projectStats?.total || projectsData.length,
+          activeProjects: activeProjectsCount,
+          completedTasks: completedTasksCount,
+          totalTasks: tasksData.length,
+          attendancePercentage,
+          averageRating: parseFloat(averageRating)
+        });
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
       } finally {
@@ -86,6 +121,7 @@ const ClientDashboard = () => {
   }, []);
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'No date';
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',

@@ -492,7 +492,7 @@ const EmployeePerformanceCard = () => {
                       <th>Task Title</th>
                       <th>Rating</th>
                       <th>Feedback</th>
-                      <th>Submission Date</th>
+                      <th>Submission Date</th> 
                     </tr>
                   </thead>
                   <tbody>
