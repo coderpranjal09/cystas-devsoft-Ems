@@ -6,11 +6,15 @@ const Task = require('../../models/Task');
 
 const calculateEmployeePerformance = async (userId, startDate, endDate) => {
   try {
-    // Get attendance data
+    console.log(`Calculating performance for user: ${userId}`);
+    
+    // FIXED: Use 'user' field, NOT 'userId'
     const attendanceRecords = await Attendance.find({
       user: userId,
       date: { $gte: startDate, $lte: endDate }
     });
+    
+    console.log(`Attendance records found: ${attendanceRecords.length}`);
 
     let presentDays = 0;
     let absentDays = 0;
@@ -27,11 +31,13 @@ const calculateEmployeePerformance = async (userId, startDate, endDate) => {
       ? ((presentDays + (halfDays * 0.5)) / totalDays) * 100 
       : 0;
 
-    // Get tasks data
+    // Get tasks data - FIXED: Use assignedTo field
     const tasks = await Task.find({
       assignedTo: userId,
       createdAt: { $gte: startDate, $lte: endDate }
     });
+    
+    console.log(`Tasks found: ${tasks.length}`);
 
     const totalAssigned = tasks.length;
     const completedTasks = tasks.filter(t => t.status === 'completed' || t.status === 'evaluated').length;
@@ -118,6 +124,9 @@ exports.generatePerformanceReport = async (req, res) => {
   try {
     const { startDate, endDate, title } = req.body;
     
+    console.log('=== Generating Performance Report ===');
+    console.log(`Start Date: ${startDate}, End Date: ${endDate}`);
+    
     if (!startDate || !endDate) {
       return res.status(400).json({ 
         success: false,
@@ -125,35 +134,34 @@ exports.generatePerformanceReport = async (req, res) => {
       });
     }
 
-    // Get all clients from your database
-    const clients = await User.find({ 
-      role: 'client',
-      isActive: true 
+    // FIXED: Include both client and employee roles
+    const users = await User.find({ 
+      role: { $in: ['client', 'employee'] }
     });
 
-    if (clients.length === 0) {
+    console.log(`Found ${users.length} total users (clients + employees)`);
+    
+    if (users.length === 0) {
       return res.status(404).json({ 
         success: false, 
-        message: 'No clients found in the system. Please add clients first.' 
+        message: 'No users found in the system. Please add employees or clients first.' 
       });
     }
 
-    console.log(`Found ${clients.length} clients for report generation`);
-    console.log('Clients:', clients.map(c => ({ name: c.name, email: c.email })));
-
     const reportData = [];
     
-    for (const client of clients) {
+    for (const user of users) {
+      console.log(`Processing user: ${user.name} (${user.role})`);
       const performance = await calculateEmployeePerformance(
-        client._id,
+        user._id,
         new Date(startDate),
         new Date(endDate)
       );
       
       reportData.push({
-        employee: client._id,
-        employeeName: client.name,
-        employeeRole: client.role,
+        employee: user._id,
+        employeeName: user.name,
+        employeeRole: user.role,
         ...performance
       });
     }
@@ -167,6 +175,8 @@ exports.generatePerformanceReport = async (req, res) => {
     });
 
     await report.save();
+    
+    console.log(`Report generated successfully with ID: ${report._id}`);
 
     res.status(201).json({
       success: true,
@@ -182,7 +192,6 @@ exports.generatePerformanceReport = async (req, res) => {
   }
 };
 
-// Keep other functions (publishReport, unpublishReport, etc.) the same
 exports.publishReport = async (req, res) => {
   try {
     const { reportId } = req.params;

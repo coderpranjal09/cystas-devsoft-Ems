@@ -296,16 +296,21 @@ exports.checkExistingAttendance = async (req, res) => {
     handleError(res, 500, 'Internal server error');
   }
 };
+
 // Get all employees monthly attendance
 exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
   try {
     const { year, month } = req.params;
     
-    // Get all clients (since your users have role 'client')
+    console.log(`=== Fetching Attendance ===`);
+    console.log(`Year: ${year}, Month: ${month}`);
+    
+    // Get all employees and clients - FIXED: Include both roles
     const users = await User.find({ 
-      role: 'client',
-      isActive: true 
+      role: { $in: ['client', 'employee'] }
     });
+    
+    console.log(`Found ${users.length} total users (clients + employees)`);
     
     if (!users || users.length === 0) {
       return res.json({
@@ -318,12 +323,15 @@ exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
     
     for (const user of users) {
       const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0);
+      const endDate = new Date(year, month, 0, 23, 59, 59, 999); // FIXED: Include entire last day
       
+      // FIXED: Use 'user' field, NOT 'userId'
       const attendance = await Attendance.find({
         user: user._id,
         date: { $gte: startDate, $lte: endDate }
       });
+      
+      console.log(`User: ${user.name}, Attendance records: ${attendance.length}`);
       
       const present = attendance.filter(a => a.status === 'present').length;
       const absent = attendance.filter(a => a.status === 'absent').length;
@@ -348,6 +356,8 @@ exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
       });
     }
     
+    console.log(`Returning ${attendanceData.length} attendance records`);
+    
     res.json({
       success: true,
       data: attendanceData
@@ -367,7 +377,8 @@ exports.getEmployeeMonthlyAttendance = async (req, res) => {
   try {
     const { userId, year, month } = req.params;
     
-    // First check if user exists
+    console.log(`Fetching attendance for user: ${userId}`);
+    
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
@@ -377,8 +388,9 @@ exports.getEmployeeMonthlyAttendance = async (req, res) => {
     }
     
     const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999); // FIXED: Include entire last day
     
+    // FIXED: Use 'user' field, NOT 'userId'
     const attendance = await Attendance.find({
       user: userId,
       date: { $gte: startDate, $lte: endDate }
