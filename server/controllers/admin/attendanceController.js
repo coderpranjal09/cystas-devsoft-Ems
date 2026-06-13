@@ -300,20 +300,18 @@ exports.checkExistingAttendance = async (req, res) => {
 
 const User = require('../../models/User'); // ✅ THIS LINE WAS MISSING - FIXES "User is not defined"
 
+
 // Get all employees monthly attendance
 exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
   try {
     const { year, month } = req.params;
     
-    console.log(`=== Fetching Attendance ===`);
-    console.log(`Year: ${year}, Month: ${month}`);
+    console.log(`=== Fetching Attendance for ${year}-${month} ===`);
     
-    // Get all clients and employees - using the correct field from your model
+    // Get all clients only (not admins)
     const users = await User.find({ 
-      role: { $in: ['client', 'employee'] }
+      role: 'client'
     });
-    
-    console.log(`Found ${users.length} total users`);
     
     if (!users || users.length === 0) {
       return res.json({
@@ -327,40 +325,60 @@ exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
     for (const user of users) {
       const startDate = new Date(year, month - 1, 1);
       const endDate = new Date(year, month, 0);
+      const daysInMonth = endDate.getDate();
       
-      // Using 'user' field as per your schema
+      // Get all attendance records for this user in the month
       const attendance = await Attendance.find({
         user: user._id,
         date: { $gte: startDate, $lte: endDate }
       });
       
-      console.log(`User: ${user.name}, Attendance records: ${attendance.length}`);
+      // Calculate statistics
+      let presentDays = 0;
+      let absentDays = 0;
+      let halfDays = 0;
+      let totalWorkingHours = 0;
       
-      const present = attendance.filter(a => a.status === 'present').length;
-      const absent = attendance.filter(a => a.status === 'absent').length;
-      // Your schema uses 'half_day' (with underscore)
-      const halfDay = attendance.filter(a => a.status === 'half_day').length;
-      const daysInMonth = endDate.getDate();
+      attendance.forEach(record => {
+        if (record.status === 'present') {
+          presentDays++;
+          // Calculate working hours if checkIn and checkOut exist
+          if (record.checkIn && record.checkOut) {
+            const checkInTime = new Date(record.checkIn);
+            const checkOutTime = new Date(record.checkOut);
+            const hoursWorked = (checkOutTime - checkInTime) / (1000 * 60 * 60);
+            totalWorkingHours += hoursWorked;
+          }
+        } else if (record.status === 'absent') {
+          absentDays++;
+        } else if (record.status === 'half_day') {
+          halfDays++;
+          // Half day counts as 0.5 present for percentage
+          if (record.checkIn && record.checkOut) {
+            const checkInTime = new Date(record.checkIn);
+            const checkOutTime = new Date(record.checkOut);
+            const hoursWorked = (checkOutTime - checkInTime) / (1000 * 60 * 60);
+            totalWorkingHours += hoursWorked;
+          }
+        }
+      });
       
+      // Calculate attendance percentage (half day counts as 0.5)
+      const totalPresentEquivalent = presentDays + (halfDays * 0.5);
       const attendancePercentage = daysInMonth > 0 
-        ? ((present + (halfDay * 0.5)) / daysInMonth) * 100 
+        ? Math.round((totalPresentEquivalent / daysInMonth) * 100)
         : 0;
       
       attendanceData.push({
-        employeeId: user._id,
-        employeeName: user.name,
-        employeeRole: user.role,
-        attendance: {
-          present,
-          absent,
-          halfDay,
-          notMarked: daysInMonth - attendance.length,
-          attendancePercentage: Math.round(attendancePercentage)
-        }
+        clientName: user.name,
+        attendancePercentage: `${attendancePercentage}%`,
+        totalWorkingHours: totalWorkingHours.toFixed(1),
+        presentDays: presentDays,
+        absentDays: absentDays,
+        halfDays: halfDays,
+        totalDaysInMonth: daysInMonth
       });
     }
-    
-    console.log(`Returning ${attendanceData.length} attendance records`);
     
     res.json({
       success: true,
@@ -376,12 +394,10 @@ exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
   }
 };
 
-// Get single employee monthly attendance
+// Get single employee monthly attendance with detailed view
 exports.getEmployeeMonthlyAttendance = async (req, res) => {
   try {
     const { userId, year, month } = req.params;
-    
-    console.log(`Fetching attendance for user: ${userId}`);
     
     const user = await User.findById(userId);
     if (!user) {
@@ -393,14 +409,19 @@ exports.getEmployeeMonthlyAttendance = async (req, res) => {
     
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
+    const daysInMonth = endDate.getDate();
     
     const attendance = await Attendance.find({
       user: userId,
       date: { $gte: startDate, $lte: endDate }
     }).sort({ date: 1 });
     
-    const daysInMonth = endDate.getDate();
-    const fullMonthAttendance = [];
+    // Daily breakdown
+    const dailyAttendance = [];
+    let presentDays = 0;
+    let absentDays = 0;
+    let halfDays = 0;
+    let totalWorkingHours = 0;
     
     for (let i = 1; i <= daysInMonth; i++) {
       const currentDate = new Date(year, month - 1, i);
@@ -408,39 +429,68 @@ exports.getEmployeeMonthlyAttendance = async (req, res) => {
         a => a.date && new Date(a.date).getDate() === i
       );
       
-      fullMonthAttendance.push({
-        date: currentDate,
+      let status = 'not_marked';
+      let workingHours = 0;
+      
+      if (attendanceRecord) {
+        status = attendanceRecord.status;
+        
+        if (status === 'present') {
+          presentDays++;
+          if (attendanceRecord.checkIn && attendanceRecord.checkOut) {
+            const checkInTime = new Date(attendanceRecord.checkIn);
+            const checkOutTime = new Date(attendanceRecord.checkOut);
+            workingHours = (checkOutTime - checkInTime) / (1000 * 60 * 60);
+            totalWorkingHours += workingHours;
+          }
+        } else if (status === 'absent') {
+          absentDays++;
+        } else if (status === 'half_day') {
+          halfDays++;
+          if (attendanceRecord.checkIn && attendanceRecord.checkOut) {
+            const checkInTime = new Date(attendanceRecord.checkIn);
+            const checkOutTime = new Date(attendanceRecord.checkOut);
+            workingHours = (checkOutTime - checkInTime) / (1000 * 60 * 60);
+            totalWorkingHours += workingHours;
+          }
+        }
+      }
+      
+      dailyAttendance.push({
+        date: currentDate.toISOString().split('T')[0],
         day: currentDate.toLocaleDateString('en-US', { weekday: 'short' }),
-        status: attendanceRecord ? attendanceRecord.status : 'not-marked',
-        checkIn: attendanceRecord?.checkIn,
-        checkOut: attendanceRecord?.checkOut
+        status: status,
+        workingHours: workingHours.toFixed(1),
+        checkIn: attendanceRecord?.checkIn ? new Date(attendanceRecord.checkIn).toLocaleTimeString() : null,
+        checkOut: attendanceRecord?.checkOut ? new Date(attendanceRecord.checkOut).toLocaleTimeString() : null
       });
     }
     
-    const present = attendance.filter(a => a.status === 'present').length;
-    const absent = attendance.filter(a => a.status === 'absent').length;
-    const halfDay = attendance.filter(a => a.status === 'half_day').length;
-    const notMarked = daysInMonth - attendance.length;
+    // Calculate attendance percentage
+    const totalPresentEquivalent = presentDays + (halfDays * 0.5);
     const attendancePercentage = daysInMonth > 0 
-      ? ((present + (halfDay * 0.5)) / daysInMonth) * 100 
+      ? Math.round((totalPresentEquivalent / daysInMonth) * 100)
       : 0;
     
     res.json({
       success: true,
       data: {
-        year,
-        month,
-        employeeId: userId,
-        employeeName: user.name,
-        summary: {
-          present,
-          absent,
-          halfDay,
-          notMarked,
-          totalDays: daysInMonth,
-          attendancePercentage: Math.round(attendancePercentage)
+        clientName: user.name,
+        clientEmail: user.email,
+        period: {
+          month: parseInt(month),
+          year: parseInt(year),
+          totalDays: daysInMonth
         },
-        attendance: fullMonthAttendance
+        summary: {
+          attendancePercentage: `${attendancePercentage}%`,
+          totalWorkingHours: totalWorkingHours.toFixed(1),
+          presentDays: presentDays,
+          absentDays: absentDays,
+          halfDays: halfDays,
+          notMarkedDays: daysInMonth - (presentDays + absentDays + halfDays)
+        },
+        dailyAttendance: dailyAttendance
       }
     });
   } catch (error) {
