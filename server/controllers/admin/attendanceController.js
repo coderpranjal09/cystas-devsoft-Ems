@@ -297,70 +297,26 @@ exports.checkExistingAttendance = async (req, res) => {
   }
 };
 
-// controllers/admin/attendanceController.js (add this function)
-exports.getEmployeeMonthlyAttendance = async (req, res) => {
-  try {
-    const { userId, year, month } = req.params;
-    
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
-    
-    const attendance = await Attendance.find({
-      userId,
-      date: { $gte: startDate, $lte: endDate }
-    }).sort({ date: 1 });
-    
-    // Generate all days of the month
-    const daysInMonth = endDate.getDate();
-    const fullMonthAttendance = [];
-    
-    for (let i = 1; i <= daysInMonth; i++) {
-      const currentDate = new Date(year, month - 1, i);
-      const attendanceRecord = attendance.find(
-        a => a.date.getDate() === i
-      );
-      
-      fullMonthAttendance.push({
-        date: currentDate,
-        day: currentDate.toLocaleDateString('en-US', { weekday: 'short' }),
-        status: attendanceRecord ? attendanceRecord.status : 'not-marked',
-        checkIn: attendanceRecord?.checkIn,
-        checkOut: attendanceRecord?.checkOut
-      });
-    }
-    
-    // Calculate statistics
-    const present = attendance.filter(a => a.status === 'present').length;
-    const absent = attendance.filter(a => a.status === 'absent').length;
-    const halfDay = attendance.filter(a => a.status === 'half-day').length;
-    const notMarked = daysInMonth - attendance.length;
-    
-    res.json({
-      success: true,
-      data: {
-        year,
-        month,
-        employeeId: userId,
-        summary: {
-          present,
-          absent,
-          halfDay,
-          notMarked,
-          totalDays: daysInMonth,
-          attendancePercentage: ((present + (halfDay * 0.5)) / daysInMonth) * 100
-        },
-        attendance: fullMonthAttendance
-      }
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching attendance', error: error.message });
-  }
-};
+// server/controllers/admin/attendanceController.js
 
+const User = require('../../models/User');
+
+// Get all employees monthly attendance
 exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
   try {
     const { year, month } = req.params;
-    const employees = await User.find({ role: { $in: ['employee', 'client'] } });
+    
+    const employees = await User.find({ 
+      role: { $in: ['employee', 'client'] },
+      isActive: true 
+    });
+    
+    if (!employees || employees.length === 0) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
     
     const attendanceData = [];
     
@@ -378,6 +334,10 @@ exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
       const halfDay = attendance.filter(a => a.status === 'half-day').length;
       const daysInMonth = endDate.getDate();
       
+      const attendancePercentage = daysInMonth > 0 
+        ? ((present + (halfDay * 0.5)) / daysInMonth) * 100 
+        : 0;
+      
       attendanceData.push({
         employeeId: employee._id,
         employeeName: employee.name,
@@ -387,7 +347,7 @@ exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
           absent,
           halfDay,
           notMarked: daysInMonth - attendance.length,
-          attendancePercentage: ((present + (halfDay * 0.5)) / daysInMonth) * 100
+          attendancePercentage: Math.round(attendancePercentage)
         }
       });
     }
@@ -397,6 +357,77 @@ exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
       data: attendanceData
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching attendance', error: error.message });
+    console.error('Error fetching attendance:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error fetching attendance', 
+      error: error.message 
+    });
+  }
+};
+
+// Get single employee monthly attendance
+exports.getEmployeeMonthlyAttendance = async (req, res) => {
+  try {
+    const { userId, year, month } = req.params;
+    
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+    
+    const attendance = await Attendance.find({
+      userId,
+      date: { $gte: startDate, $lte: endDate }
+    }).sort({ date: 1 });
+    
+    const daysInMonth = endDate.getDate();
+    const fullMonthAttendance = [];
+    
+    for (let i = 1; i <= daysInMonth; i++) {
+      const currentDate = new Date(year, month - 1, i);
+      const attendanceRecord = attendance.find(
+        a => a.date && new Date(a.date).getDate() === i
+      );
+      
+      fullMonthAttendance.push({
+        date: currentDate,
+        day: currentDate.toLocaleDateString('en-US', { weekday: 'short' }),
+        status: attendanceRecord ? attendanceRecord.status : 'not-marked',
+        checkIn: attendanceRecord?.checkIn,
+        checkOut: attendanceRecord?.checkOut
+      });
+    }
+    
+    const present = attendance.filter(a => a.status === 'present').length;
+    const absent = attendance.filter(a => a.status === 'absent').length;
+    const halfDay = attendance.filter(a => a.status === 'half-day').length;
+    const notMarked = daysInMonth - attendance.length;
+    const attendancePercentage = daysInMonth > 0 
+      ? ((present + (halfDay * 0.5)) / daysInMonth) * 100 
+      : 0;
+    
+    res.json({
+      success: true,
+      data: {
+        year,
+        month,
+        employeeId: userId,
+        summary: {
+          present,
+          absent,
+          halfDay,
+          notMarked,
+          totalDays: daysInMonth,
+          attendancePercentage: Math.round(attendancePercentage)
+        },
+        attendance: fullMonthAttendance
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching employee attendance:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error fetching attendance', 
+      error: error.message 
+    });
   }
 };

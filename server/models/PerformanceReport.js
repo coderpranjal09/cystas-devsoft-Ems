@@ -1,4 +1,4 @@
-// models/PerformanceReport.js
+// server/models/PerformanceReport.js
 const mongoose = require('mongoose');
 
 const performanceReportSchema = new mongoose.Schema({
@@ -19,18 +19,18 @@ const performanceReportSchema = new mongoose.Schema({
     employeeName: String,
     employeeRole: String,
     attendance: {
-      totalDays: Number,
-      presentDays: Number,
-      absentDays: Number,
-      halfDays: Number,
-      attendancePercentage: Number
+      totalDays: { type: Number, default: 0 },
+      presentDays: { type: Number, default: 0 },
+      absentDays: { type: Number, default: 0 },
+      halfDays: { type: Number, default: 0 },
+      attendancePercentage: { type: Number, default: 0 }
     },
     tasks: {
-      totalAssigned: Number,
-      completedTasks: Number,
-      pendingTasks: Number,
-      inProgressTasks: Number,
-      averageRating: Number,
+      totalAssigned: { type: Number, default: 0 },
+      completedTasks: { type: Number, default: 0 },
+      pendingTasks: { type: Number, default: 0 },
+      inProgressTasks: { type: Number, default: 0 },
+      averageRating: { type: Number, default: 0 },
       tasksWithRatings: [{
         taskId: mongoose.Schema.Types.ObjectId,
         title: String,
@@ -39,8 +39,8 @@ const performanceReportSchema = new mongoose.Schema({
         submittedAt: Date
       }]
     },
-    overallScore: Number,
-    performanceGrade: String
+    overallScore: { type: Number, default: 0 },
+    performanceGrade: { type: String, default: 'N/A' }
   }],
   status: {
     type: String,
@@ -52,15 +52,9 @@ const performanceReportSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  publishedAt: Date,
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
+  publishedAt: Date
+}, {
+  timestamps: true
 });
 
 module.exports = mongoose.model('PerformanceReport', performanceReportSchema);

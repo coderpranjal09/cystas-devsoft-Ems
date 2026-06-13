@@ -5,7 +5,6 @@ exports.getMyPerformanceReports = async (req, res) => {
   try {
     console.log('Fetching performance reports for user:', req.user.id);
     
-    // Find all published reports that contain this employee's data
     const reports = await PerformanceReport.find({
       status: 'published',
       'reportData.employee': req.user.id
@@ -13,10 +12,9 @@ exports.getMyPerformanceReports = async (req, res) => {
     
     console.log(`Found ${reports.length} reports for user`);
     
-    // Extract only the current user's data from each report
     const myPerformanceData = reports.map(report => {
       const myData = report.reportData.find(
-        data => data.employee.toString() === req.user.id
+        data => data.employee && data.employee.toString() === req.user.id
       );
       
       if (!myData) return null;
@@ -27,10 +25,19 @@ exports.getMyPerformanceReports = async (req, res) => {
         period: report.period,
         publishedAt: report.publishedAt,
         performance: {
-          attendance: myData.attendance,
-          tasks: myData.tasks,
-          overallScore: myData.overallScore,
-          performanceGrade: myData.performanceGrade
+          attendance: myData.attendance || {
+            attendancePercentage: 0,
+            presentDays: 0,
+            totalDays: 0
+          },
+          tasks: myData.tasks || {
+            completedTasks: 0,
+            totalAssigned: 0,
+            averageRating: 0,
+            tasksWithRatings: []
+          },
+          overallScore: myData.overallScore || 0,
+          performanceGrade: myData.performanceGrade || 'N/A'
         }
       };
     }).filter(data => data !== null);
