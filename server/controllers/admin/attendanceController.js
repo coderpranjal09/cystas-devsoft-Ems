@@ -296,16 +296,19 @@ exports.checkExistingAttendance = async (req, res) => {
     handleError(res, 500, 'Internal server error');
   }
 };
+// server/controllers/admin/attendanceController.js - Update the role filter
+
 exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
   try {
     const { year, month } = req.params;
     
-    const employees = await User.find({ 
-      role: { $in: ['employee', 'client'] },
+    // Get all clients (since your users have role 'client')
+    const users = await User.find({ 
+      role: 'client',  // Changed from ['employee', 'client']
       isActive: true 
     });
     
-    if (!employees || employees.length === 0) {
+    if (!users || users.length === 0) {
       return res.json({
         success: true,
         data: []
@@ -314,13 +317,12 @@ exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
     
     const attendanceData = [];
     
-    for (const employee of employees) {
+    for (const user of users) {
       const startDate = new Date(year, month - 1, 1);
       const endDate = new Date(year, month, 0);
       
-      // IMPORTANT: Use 'user' field not 'userId' because your model uses 'user'
       const attendance = await Attendance.find({
-        user: employee._id,
+        user: user._id,
         date: { $gte: startDate, $lte: endDate }
       });
       
@@ -334,9 +336,9 @@ exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
         : 0;
       
       attendanceData.push({
-        employeeId: employee._id,
-        employeeName: employee.name,
-        employeeRole: employee.role,
+        employeeId: user._id,
+        employeeName: user.name,
+        employeeRole: user.role,
         attendance: {
           present,
           absent,
@@ -353,73 +355,6 @@ exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching attendance:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Error fetching attendance', 
-      error: error.message 
-    });
-  }
-};
-
-// Get single employee monthly attendance
-exports.getEmployeeMonthlyAttendance = async (req, res) => {
-  try {
-    const { userId, year, month } = req.params;
-    
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
-    
-    // IMPORTANT: Use 'user' field not 'userId'
-    const attendance = await Attendance.find({
-      user: userId,
-      date: { $gte: startDate, $lte: endDate }
-    }).sort({ date: 1 });
-    
-    const daysInMonth = endDate.getDate();
-    const fullMonthAttendance = [];
-    
-    for (let i = 1; i <= daysInMonth; i++) {
-      const currentDate = new Date(year, month - 1, i);
-      const attendanceRecord = attendance.find(
-        a => a.date && new Date(a.date).getDate() === i
-      );
-      
-      fullMonthAttendance.push({
-        date: currentDate,
-        day: currentDate.toLocaleDateString('en-US', { weekday: 'short' }),
-        status: attendanceRecord ? attendanceRecord.status : 'not-marked',
-        checkIn: attendanceRecord?.checkIn,
-        checkOut: attendanceRecord?.checkOut
-      });
-    }
-    
-    const present = attendance.filter(a => a.status === 'present').length;
-    const absent = attendance.filter(a => a.status === 'absent').length;
-    const halfDay = attendance.filter(a => a.status === 'half-day').length;
-    const notMarked = daysInMonth - attendance.length;
-    const attendancePercentage = daysInMonth > 0 
-      ? ((present + (halfDay * 0.5)) / daysInMonth) * 100 
-      : 0;
-    
-    res.json({
-      success: true,
-      data: {
-        year,
-        month,
-        employeeId: userId,
-        summary: {
-          present,
-          absent,
-          halfDay,
-          notMarked,
-          totalDays: daysInMonth,
-          attendancePercentage: Math.round(attendancePercentage)
-        },
-        attendance: fullMonthAttendance
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching employee attendance:', error);
     res.status(500).json({ 
       success: false,
       message: 'Error fetching attendance', 

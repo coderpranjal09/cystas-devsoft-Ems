@@ -4,11 +4,11 @@ const User = require('../../models/User');
 const Attendance = require('../../models/Attendance');
 const Task = require('../../models/Task');
 
-const calculateEmployeePerformance = async (employeeId, startDate, endDate) => {
+const calculateEmployeePerformance = async (userId, startDate, endDate) => {
   try {
-    // Get attendance data - IMPORTANT: Use 'user' field
+    // Get attendance data
     const attendanceRecords = await Attendance.find({
-      user: employeeId,
+      user: userId,
       date: { $gte: startDate, $lte: endDate }
     });
 
@@ -29,7 +29,7 @@ const calculateEmployeePerformance = async (employeeId, startDate, endDate) => {
 
     // Get tasks data
     const tasks = await Task.find({
-      assignedTo: employeeId,
+      assignedTo: userId,
       createdAt: { $gte: startDate, $lte: endDate }
     });
 
@@ -125,32 +125,34 @@ exports.generatePerformanceReport = async (req, res) => {
       });
     }
 
-    // Get all employees (both employee and client roles)
-    const employees = await User.find({
-      role: { $in: ['employee', 'client'] },
+    // Get ALL users with role 'client' (since your users have role 'client')
+    const users = await User.find({
+      role: 'client',  // Changed from ['employee', 'client'] to just 'client'
       isActive: true
     });
 
-    if (employees.length === 0) {
+    if (users.length === 0) {
       return res.status(404).json({ 
         success: false, 
-        message: 'No employees found in the system. Please add employees first.' 
+        message: 'No clients found in the system. Please add clients first.' 
       });
     }
 
+    console.log(`Found ${users.length} clients for report generation`);
+
     const reportData = [];
     
-    for (const employee of employees) {
+    for (const user of users) {
       const performance = await calculateEmployeePerformance(
-        employee._id,
+        user._id,
         new Date(startDate),
         new Date(endDate)
       );
       
       reportData.push({
-        employee: employee._id,
-        employeeName: employee.name,
-        employeeRole: employee.role,
+        employee: user._id,
+        employeeName: user.name,
+        employeeRole: user.role,
         ...performance
       });
     }
@@ -179,6 +181,7 @@ exports.generatePerformanceReport = async (req, res) => {
   }
 };
 
+// Also update the attendance controller to include clients
 exports.publishReport = async (req, res) => {
   try {
     const { reportId } = req.params;
