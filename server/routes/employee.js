@@ -20,4 +20,7 @@ router
   .route('/tasks/:taskId/submit')
   .post(taskController.submitTask);
 
+// routes/employee.js (add this route)
+router.get('/performance/reports', require('../controllers/client/performanceController').getMyPerformanceReports);
+  
 module.exports = router;

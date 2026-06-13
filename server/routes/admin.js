@@ -107,4 +107,18 @@ router
 // ✅ Dashboard Stats
 router.get('/dashboard/stats', adminController.getAdminStats);
 
+
+// routes/admin.js (add these routes)
+// Attendance month-wise routes
+router.get('/attendance/monthly/:year/:month', attendanceController.getAllEmployeesMonthlyAttendance);
+router.get('/attendance/user/:userId/:year/:month', attendanceController.getEmployeeMonthlyAttendance);
+
+// Performance report routes
+const performanceReportController = require('../controllers/admin/performanceReportController');
+
+router.post('/performance/generate', performanceReportController.generatePerformanceReport);
+router.post('/performance/publish/:reportId', performanceReportController.publishReport);
+router.post('/performance/unpublish/:reportId', performanceReportController.unpublishReport);
+router.get('/performance/reports', performanceReportController.getAllReports);
+router.get('/performance/report/:reportId', performanceReportController.getReportById);
 module.exports = router;
