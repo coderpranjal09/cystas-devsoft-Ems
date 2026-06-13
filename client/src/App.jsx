@@ -15,6 +15,10 @@ import AdminDashboard from "./admin/Dashboard";
 import Employees from "./admin/Employees";
 import Projects from "./admin/Projects";
 import Attendance from "./admin/Attendance";
+import MonthlyAttendancePage from "./admin/MonthlyAttendanceView";
+import PerformanceReportsPage from "./admin/PerformanceReportGenerator";
+import Assignment from "./admin/Assignment";
+import AdminLeaves from "./admin/AdminLeaves";
 
 // Client Pages
 import ClientDashboard from "./client/ClientDashboard";
@@ -22,10 +26,8 @@ import ClientTasks from "./client/Tasks";
 import ClientLeaves from "./client/Leaves";
 import AttendanceCalander from "./client/AttendanceCalander";
 import ClientProfile from "./client/ClientProfile";
-import LeavesPage from "./client/Leaves";
-import Assignment from "./admin/Assignment";
-import AdminLeaves from "./admin/AdminLeaves";
 import ClientProject from "./client/ClientProject";
+import ClientPerformance from "./client/EmployeePerformanceCard";
 
 function App() {
   return (
@@ -34,6 +36,7 @@ function App() {
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
+        
         {/* Admin Routes */}
         <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
           <Route path="/admin" element={<Layout />}>
@@ -42,13 +45,14 @@ function App() {
             <Route path="employees" element={<Employees />} />
             <Route path="projects" element={<Projects />} />
             <Route path="attendance" element={<Attendance />} />
+            <Route path="monthly-attendance" element={<MonthlyAttendancePage />} />
+            <Route path="performance-reports" element={<PerformanceReportsPage />} />
             <Route path="leaves" element={<AdminLeaves />} />
-            <Route path='assignments' element={<Assignment/>}/>
-            
+            <Route path="assignments" element={<Assignment />} />
           </Route>
         </Route>
+        
         {/* Client Routes */}
-        // In your main router configuration
         <Route element={<ProtectedRoute allowedRoles={["client"]} />}>
           <Route path="/client" element={<ClientLayout />}>
             <Route path="dashboard" element={<ClientDashboard />} />
@@ -56,9 +60,11 @@ function App() {
             <Route path="tasks" element={<ClientTasks />} />
             <Route path="attendance" element={<AttendanceCalander />} />
             <Route path="leaves" element={<ClientLeaves />} />
-            <Route path='projects' element={<ClientProject/>}/>
+            <Route path="projects" element={<ClientProject />} />
+            <Route path="performance" element={<ClientPerformance />} />
           </Route>
         </Route>
+        
         {/* Default Redirect */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/login" replace />} />

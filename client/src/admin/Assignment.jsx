@@ -26,7 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import Calendar from "@/components/ui/calendar";
+import Calendar from "@/components/ui/Calendar";
 import {
   Popover,
   PopoverContent,
