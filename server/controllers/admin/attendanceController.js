@@ -296,6 +296,9 @@ exports.checkExistingAttendance = async (req, res) => {
     handleError(res, 500, 'Internal server error');
   }
 };
+// server/controllers/admin/attendanceController.js
+
+const User = require('../../models/User'); // ✅ THIS LINE WAS MISSING - FIXES "User is not defined"
 
 // Get all employees monthly attendance
 exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
@@ -305,12 +308,12 @@ exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
     console.log(`=== Fetching Attendance ===`);
     console.log(`Year: ${year}, Month: ${month}`);
     
-    // Get all employees and clients - FIXED: Include both roles
+    // Get all clients and employees - using the correct field from your model
     const users = await User.find({ 
       role: { $in: ['client', 'employee'] }
     });
     
-    console.log(`Found ${users.length} total users (clients + employees)`);
+    console.log(`Found ${users.length} total users`);
     
     if (!users || users.length === 0) {
       return res.json({
@@ -323,9 +326,9 @@ exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
     
     for (const user of users) {
       const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0, 23, 59, 59, 999); // FIXED: Include entire last day
+      const endDate = new Date(year, month, 0);
       
-      // FIXED: Use 'user' field, NOT 'userId'
+      // Using 'user' field as per your schema
       const attendance = await Attendance.find({
         user: user._id,
         date: { $gte: startDate, $lte: endDate }
@@ -335,7 +338,8 @@ exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
       
       const present = attendance.filter(a => a.status === 'present').length;
       const absent = attendance.filter(a => a.status === 'absent').length;
-      const halfDay = attendance.filter(a => a.status === 'half-day').length;
+      // Your schema uses 'half_day' (with underscore)
+      const halfDay = attendance.filter(a => a.status === 'half_day').length;
       const daysInMonth = endDate.getDate();
       
       const attendancePercentage = daysInMonth > 0 
@@ -388,9 +392,8 @@ exports.getEmployeeMonthlyAttendance = async (req, res) => {
     }
     
     const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59, 999); // FIXED: Include entire last day
+    const endDate = new Date(year, month, 0);
     
-    // FIXED: Use 'user' field, NOT 'userId'
     const attendance = await Attendance.find({
       user: userId,
       date: { $gte: startDate, $lte: endDate }
@@ -416,7 +419,7 @@ exports.getEmployeeMonthlyAttendance = async (req, res) => {
     
     const present = attendance.filter(a => a.status === 'present').length;
     const absent = attendance.filter(a => a.status === 'absent').length;
-    const halfDay = attendance.filter(a => a.status === 'half-day').length;
+    const halfDay = attendance.filter(a => a.status === 'half_day').length;
     const notMarked = daysInMonth - attendance.length;
     const attendancePercentage = daysInMonth > 0 
       ? ((present + (halfDay * 0.5)) / daysInMonth) * 100 
