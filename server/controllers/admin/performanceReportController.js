@@ -64,7 +64,7 @@ const calculateEmployeePerformance = async (userId, startDate, endDate) => {
     const overallScore = (
       (attendancePercentage * 0.3) +
       (taskCompletionRate * 0.4) +
-      (averageRating * 10 * 0.3)
+      ((averageRating / 5) * 100 * 0.3)
     );
 
     // Determine grade
