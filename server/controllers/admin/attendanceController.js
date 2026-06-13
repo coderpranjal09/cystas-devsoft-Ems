@@ -296,12 +296,6 @@ exports.checkExistingAttendance = async (req, res) => {
     handleError(res, 500, 'Internal server error');
   }
 };
-
-// server/controllers/admin/attendanceController.js
-
-const User = require('../../models/User');
-
-// Get all employees monthly attendance
 exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
   try {
     const { year, month } = req.params;
@@ -324,8 +318,9 @@ exports.getAllEmployeesMonthlyAttendance = async (req, res) => {
       const startDate = new Date(year, month - 1, 1);
       const endDate = new Date(year, month, 0);
       
+      // IMPORTANT: Use 'user' field not 'userId' because your model uses 'user'
       const attendance = await Attendance.find({
-        userId: employee._id,
+        user: employee._id,
         date: { $gte: startDate, $lte: endDate }
       });
       
@@ -374,8 +369,9 @@ exports.getEmployeeMonthlyAttendance = async (req, res) => {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0);
     
+    // IMPORTANT: Use 'user' field not 'userId'
     const attendance = await Attendance.find({
-      userId,
+      user: userId,
       date: { $gte: startDate, $lte: endDate }
     }).sort({ date: 1 });
     

@@ -6,9 +6,9 @@ const Task = require('../../models/Task');
 
 const calculateEmployeePerformance = async (employeeId, startDate, endDate) => {
   try {
-    // Get attendance data
+    // Get attendance data - IMPORTANT: Use 'user' field
     const attendanceRecords = await Attendance.find({
-      userId: employeeId,
+      user: employeeId,
       date: { $gte: startDate, $lte: endDate }
     });
 
@@ -40,13 +40,13 @@ const calculateEmployeePerformance = async (employeeId, startDate, endDate) => {
 
     // Calculate ratings
     const tasksWithRatings = tasks
-      .filter(t => t.rating && t.rating > 0)
+      .filter(t => t.evaluation && t.evaluation.rating)
       .map(t => ({
         taskId: t._id,
         title: t.title,
-        rating: t.rating,
-        feedback: t.feedback || '',
-        submittedAt: t.updatedAt
+        rating: t.evaluation?.rating || 0,
+        feedback: t.evaluation?.feedback || '',
+        submittedAt: t.submission?.submittedAt || t.updatedAt
       }));
 
     const averageRating = tasksWithRatings.length > 0
@@ -125,6 +125,7 @@ exports.generatePerformanceReport = async (req, res) => {
       });
     }
 
+    // Get all employees (both employee and client roles)
     const employees = await User.find({
       role: { $in: ['employee', 'client'] },
       isActive: true
@@ -133,7 +134,7 @@ exports.generatePerformanceReport = async (req, res) => {
     if (employees.length === 0) {
       return res.status(404).json({ 
         success: false, 
-        message: 'No employees found in the system' 
+        message: 'No employees found in the system. Please add employees first.' 
       });
     }
 
