@@ -122,382 +122,413 @@ const PerformanceReportGenerator = () => {
   };
 
   const handlePrint = () => {
-    const printContent = document.getElementById('report-content');
+    if (!generatedReport) {
+      alert('No report data to print.');
+      return;
+    }
+
+    // Create an iframe for better cross-device compatibility
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
     
-    if (printContent) {
-      const originalContent = printContent.cloneNode(true);
-      
-      // Create a complete HTML document for printing
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>${generatedReport?.title || 'Performance Report'} - Cystas Devsoft</title>
-            <meta charset="UTF-8">
-            <style>
-              /* Reset and Base Styles */
-              * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-              }
-              
+    const iframeDoc = iframe.contentWindow.document;
+    
+    const getScoreClass = (score) => {
+      if (score >= 80) return 'print-score-high';
+      if (score >= 60) return 'print-score-medium';
+      if (score >= 40) return 'print-score-low';
+      return 'print-score-poor';
+    };
+    
+    const getGradeClass = (grade) => {
+      const gradeMap = {
+        'A+': 'print-grade-A', 'A': 'print-grade-A',
+        'B+': 'print-grade-B', 'B': 'print-grade-B',
+        'C': 'print-grade-C', 'D': 'print-grade-D', 'F': 'print-grade-F'
+      };
+      return gradeMap[grade] || 'print-grade-C';
+    };
+    
+    const getPerformanceLevel = (score) => {
+      if (score >= 90) return 'Excellent';
+      if (score >= 80) return 'Very Good';
+      if (score >= 70) return 'Good';
+      if (score >= 60) return 'Satisfactory';
+      if (score >= 50) return 'Needs Improvement';
+      return 'Poor';
+    };
+    
+    iframeDoc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${generatedReport?.title || 'Performance Report'} - Cystas Devsoft</title>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            
+            body {
+              font-family: 'Segoe UI', Arial, sans-serif;
+              background: white;
+              padding: 40px;
+              color: #000000;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            
+            .print-wrapper {
+              max-width: 1200px;
+              margin: 0 auto;
+              background: white;
+            }
+            
+            /* Letterhead */
+            .print-letterhead {
+              text-align: center;
+              padding: 30px;
+              background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+              color: white;
+              margin-bottom: 30px;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .print-letterhead h1 {
+              font-size: 28px;
+              margin-bottom: 8px;
+              letter-spacing: 1px;
+            }
+            .print-letterhead .cin {
+              font-size: 11px;
+              margin-top: 5px;
+              opacity: 0.85;
+            }
+            .print-letterhead .address {
+              font-size: 10px;
+              margin-top: 8px;
+              line-height: 1.4;
+              opacity: 0.9;
+            }
+            .print-letterhead .email {
+              font-size: 10px;
+              margin-top: 5px;
+              opacity: 0.85;
+            }
+            .print-letterhead .subtitle {
+              margin-top: 15px;
+              font-size: 12px;
+              border-top: 1px solid rgba(255,255,255,0.3);
+              padding-top: 12px;
+              font-weight: bold;
+            }
+            .print-letterhead .generated-date {
+              font-size: 10px;
+              margin-top: 8px;
+              opacity: 0.8;
+            }
+            
+            /* Report Header */
+            .print-header {
+              text-align: center;
+              margin-bottom: 25px;
+              padding-bottom: 15px;
+              border-bottom: 2px solid #ddd;
+            }
+            .print-header h2 {
+              font-size: 22px;
+              color: #1a2a6c;
+              margin-bottom: 8px;
+            }
+            .print-header .period {
+              color: #444;
+              font-size: 13px;
+            }
+            .print-header .status {
+              display: inline-block;
+              padding: 2px 10px;
+              border-radius: 20px;
+              font-size: 11px;
+              margin-top: 8px;
+            }
+            .print-status-published {
+              background: #d4edda;
+              color: #155724;
+            }
+            .print-status-draft {
+              background: #fff3cd;
+              color: #856404;
+            }
+            
+            /* Stats Grid */
+            .print-stats-grid {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 15px;
+              margin-bottom: 30px;
+            }
+            .print-stat-card {
+              padding: 15px;
+              border-radius: 8px;
+              text-align: center;
+            }
+            .print-stat-card .stat-value {
+              font-size: 28px;
+              font-weight: bold;
+              margin-bottom: 5px;
+            }
+            .print-stat-card .stat-label {
+              font-size: 12px;
+              color: #555;
+            }
+            .print-stat-blue {
+              background: #eff6ff;
+              border: 1px solid #bfdbfe;
+            }
+            .print-stat-blue .stat-value { color: #2563eb; }
+            .print-stat-green {
+              background: #f0fdf4;
+              border: 1px solid #bbf7d0;
+            }
+            .print-stat-green .stat-value { color: #16a34a; }
+            .print-stat-purple {
+              background: #faf5ff;
+              border: 1px solid #e9d5ff;
+            }
+            .print-stat-purple .stat-value { color: #9333ea; }
+            .print-stat-orange {
+              background: #fff7ed;
+              border: 1px solid #fed7aa;
+            }
+            .print-stat-orange .stat-value { color: #ea580c; }
+            
+            /* Table Styles */
+            .print-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 20px 0;
+              font-size: 12px;
+            }
+            .print-table th {
+              background: #1e3c72;
+              color: white;
+              padding: 10px;
+              text-align: left;
+              font-weight: 600;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .print-table td {
+              padding: 8px 10px;
+              border-bottom: 1px solid #e0e0e0;
+              color: #333;
+            }
+            .print-table tr:nth-child(even) {
+              background: #f9fafb;
+            }
+            
+            /* Grade Badges */
+            .print-grade {
+              display: inline-block;
+              padding: 2px 8px;
+              border-radius: 12px;
+              font-size: 11px;
+              font-weight: bold;
+            }
+            .print-grade-A {
+              background: #d4edda;
+              color: #155724;
+            }
+            .print-grade-B {
+              background: #d1ecf1;
+              color: #0c5460;
+            }
+            .print-grade-C {
+              background: #fff3cd;
+              color: #856404;
+            }
+            .print-grade-D {
+              background: #ffe5d0;
+              color: #e46a00;
+            }
+            .print-grade-F {
+              background: #f8d7da;
+              color: #721c24;
+            }
+            
+            /* Score Colors */
+            .print-score-high { color: #16a34a; font-weight: bold; }
+            .print-score-medium { color: #2563eb; font-weight: bold; }
+            .print-score-low { color: #ea580c; font-weight: bold; }
+            .print-score-poor { color: #dc2626; font-weight: bold; }
+            
+            /* Footer */
+            .print-footer {
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 1px solid #ddd;
+              text-align: center;
+              font-size: 10px;
+              color: #666;
+            }
+            .print-signature {
+              margin-top: 40px;
+              display: flex;
+              justify-content: flex-end;
+            }
+            .print-signature-box {
+              width: 250px;
+              text-align: center;
+            }
+            .print-signature-line {
+              border-top: 1px solid #000;
+              margin-top: 40px;
+              margin-bottom: 8px;
+            }
+            
+            @media print {
               body {
-                font-family: 'Segoe UI', Arial, sans-serif;
-                background: white;
-                padding: 40px;
-                color: #000000;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+                padding: 0;
+                margin: 0;
               }
-              
-              /* Letterhead */
-              .print-letterhead {
-                text-align: center;
-                padding: 30px;
-                background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-                color: white;
-                margin-bottom: 30px;
-                border-radius: 0;
+              .no-print {
+                display: none;
               }
-              .print-letterhead h1 {
-                font-size: 28px;
-                margin-bottom: 8px;
-                letter-spacing: 1px;
+              .print-stat-card, .print-table tr {
+                break-inside: avoid;
               }
-              .print-letterhead .cin {
-                font-size: 11px;
-                margin-top: 5px;
-                opacity: 0.85;
-              }
-              .print-letterhead .address {
-                font-size: 10px;
-                margin-top: 8px;
-                line-height: 1.4;
-                opacity: 0.9;
-              }
-              .print-letterhead .email {
-                font-size: 10px;
-                margin-top: 5px;
-                opacity: 0.85;
-              }
-              .print-letterhead .subtitle {
-                margin-top: 15px;
-                font-size: 12px;
-                border-top: 1px solid rgba(255,255,255,0.3);
-                padding-top: 12px;
-                font-weight: bold;
-              }
-              .print-letterhead .generated-date {
-                font-size: 10px;
-                margin-top: 8px;
-                opacity: 0.8;
-              }
-              
-              /* Report Header */
-              .print-header {
-                text-align: center;
-                margin-bottom: 25px;
-                padding-bottom: 15px;
-                border-bottom: 2px solid #ddd;
-              }
-              .print-header h2 {
-                font-size: 22px;
-                color: #1a2a6c;
-                margin-bottom: 8px;
-              }
-              .print-header .period {
-                color: #444;
-                font-size: 13px;
-              }
-              .print-header .status {
-                display: inline-block;
-                padding: 2px 10px;
-                border-radius: 20px;
-                font-size: 11px;
-                margin-top: 8px;
-              }
-              .print-status-published {
-                background: #d4edda;
-                color: #155724;
-              }
-              .print-status-draft {
-                background: #fff3cd;
-                color: #856404;
-              }
-              
-              /* Stats Grid */
-              .print-stats-grid {
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 15px;
-                margin-bottom: 30px;
-              }
-              .print-stat-card {
-                padding: 15px;
-                border-radius: 8px;
-                text-align: center;
-              }
-              .print-stat-card .stat-value {
-                font-size: 28px;
-                font-weight: bold;
-                margin-bottom: 5px;
-              }
-              .print-stat-card .stat-label {
-                font-size: 12px;
-                color: #555;
-              }
-              .print-stat-blue {
-                background: #eff6ff;
-                border: 1px solid #bfdbfe;
-              }
-              .print-stat-blue .stat-value { color: #2563eb; }
-              .print-stat-green {
-                background: #f0fdf4;
-                border: 1px solid #bbf7d0;
-              }
-              .print-stat-green .stat-value { color: #16a34a; }
-              .print-stat-purple {
-                background: #faf5ff;
-                border: 1px solid #e9d5ff;
-              }
-              .print-stat-purple .stat-value { color: #9333ea; }
-              .print-stat-orange {
-                background: #fff7ed;
-                border: 1px solid #fed7aa;
-              }
-              .print-stat-orange .stat-value { color: #ea580c; }
-              
-              /* Table Styles */
-              .print-table {
-                width: 100%;
-                border-collapse: collapse;
-                margin: 20px 0;
-              }
-              .print-table th {
-                background: #1e3c72;
-                color: white;
-                padding: 12px;
-                text-align: left;
-                font-size: 13px;
-                font-weight: 600;
-              }
-              .print-table td {
-                padding: 10px 12px;
-                border-bottom: 1px solid #e0e0e0;
-                font-size: 12px;
-                color: #333;
-              }
-              .print-table tr:hover {
-                background: #f5f5f5;
-              }
-              
-              /* Grade Badges */
-              .print-grade {
-                display: inline-block;
-                padding: 3px 8px;
-                border-radius: 15px;
-                font-size: 11px;
-                font-weight: bold;
-              }
-              .print-grade-A {
-                background: #d4edda;
-                color: #155724;
-              }
-              .print-grade-B {
-                background: #d1ecf1;
-                color: #0c5460;
-              }
-              .print-grade-C {
-                background: #fff3cd;
-                color: #856404;
-              }
-              .print-grade-D {
-                background: #ffe5d0;
-                color: #e46a00;
-              }
-              .print-grade-F {
-                background: #f8d7da;
-                color: #721c24;
-              }
-              
-              /* Score Colors */
-              .print-score-high { color: #16a34a; font-weight: bold; font-size: 16px; }
-              .print-score-medium { color: #2563eb; font-weight: bold; font-size: 16px; }
-              .print-score-low { color: #ea580c; font-weight: bold; font-size: 16px; }
-              .print-score-poor { color: #dc2626; font-weight: bold; font-size: 16px; }
-              
-              /* Footer */
-              .print-footer {
-                margin-top: 30px;
-                padding-top: 20px;
-                border-top: 1px solid #ddd;
-                text-align: center;
-                font-size: 10px;
-                color: #666;
-              }
-              .print-signature {
-                margin-top: 40px;
-                display: flex;
-                justify-content: flex-end;
-              }
-              .print-signature-box {
-                width: 250px;
-                text-align: center;
-              }
-              .print-signature-line {
-                border-top: 1px solid #000;
-                margin-top: 40px;
-                margin-bottom: 8px;
-              }
-              
-              @media print {
-                body {
-                  padding: 0;
-                  margin: 0;
-                }
-                .no-print {
-                  display: none;
-                }
-              }
-            </style>
-          </head>
-          <body>
-            <div style="max-width: 1200px; margin: 0 auto;">
-              <!-- Letterhead -->
-              <div class="print-letterhead">
-                <h1>CYSTAS DEVSOFT PRIVATE LIMITED</h1>
-                <div class="cin">CIN: U62090UT2025PTC019363</div>
-                <div class="address">
-                  Regd. Off:- C/o Bhuvan Chandra Maithani, Makku, Makkumath, Makoomath,<br />
-                  Okhimath, Rudraprayag, Uttarakhand - 246419, India.
-                </div>
-                <div class="email">Email: cystasdevsoft@gmail.com</div>
-                <div class="subtitle">
-                  Enterprise Performance Evaluation Report
-                </div>
-                <div class="generated-date">
-                  Generated on: ${format(new Date(), 'MMMM dd, yyyy')}
-                </div>
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-wrapper">
+            <!-- Letterhead -->
+            <div class="print-letterhead">
+              <h1>CYSTAS DEVSOFT PRIVATE LIMITED</h1>
+              <div class="cin">CIN: U62090UT2025PTC019363</div>
+              <div class="address">
+                Regd. Off:- C/o Bhuvan Chandra Maithani, Makku, Makkumath, Makoomath,<br />
+                Okhimath, Rudraprayag, Uttarakhand - 246419, India.
               </div>
-
-              <!-- Report Header -->
-              <div class="print-header">
-                <h2>${generatedReport?.title || 'Performance Evaluation Report'}</h2>
-                <p class="period">
-                  Reporting Period: ${format(new Date(generatedReport?.period.startDate), 'MMMM dd, yyyy')} - ${format(new Date(generatedReport?.period.endDate), 'MMMM dd, yyyy')}
-                </p>
-                <span class="status ${generatedReport?.status === 'published' ? 'print-status-published' : 'print-status-draft'}">
-                  Status: ${generatedReport?.status?.toUpperCase() || 'DRAFT'}
-                </span>
+              <div class="email">Email: cystasdevsoft@gmail.com</div>
+              <div class="subtitle">
+                Enterprise Performance Evaluation Report
               </div>
-
-              <!-- Stats Grid -->
-              <div class="print-stats-grid">
-                <div class="print-stat-card print-stat-blue">
-                  <div class="stat-value">${generatedReport?.reportData?.length || 0}</div>
-                  <div class="stat-label">Total Employees</div>
-                </div>
-                <div class="print-stat-card print-stat-green">
-                  <div class="stat-value">${generatedReport?.reportData?.length > 0 ? Math.round(generatedReport.reportData.reduce((sum, d) => sum + (d.attendance.attendancePercentage || 0), 0) / generatedReport.reportData.length) : 0}%</div>
-                  <div class="stat-label">Average Attendance</div>
-                </div>
-                <div class="print-stat-card print-stat-purple">
-                  <div class="stat-value">${generatedReport?.reportData?.length > 0 ? Math.round(generatedReport.reportData.reduce((sum, d) => sum + (d.overallScore || 0), 0) / generatedReport.reportData.length) : 0}</div>
-                  <div class="stat-label">Average Overall Score</div>
-                </div>
-                <div class="print-stat-card print-stat-orange">
-                  <div class="stat-value">${generatedReport?.reportData?.filter(d => d.performanceGrade === 'A+' || d.performanceGrade === 'A').length || 0}</div>
-                  <div class="stat-label">Top Performers (A Grade)</div>
-                </div>
-              </div>
-
-              <!-- Data Table -->
-              <table class="print-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Employee Name</th>
-                    <th>Role</th>
-                    <th>Attendance</th>
-                    <th>Tasks (C/T)</th>
-                    <th>Avg Rating</th>
-                    <th>Overall Score</th>
-                    <th>Grade</th>
-                    <th>Performance Level</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${generatedReport?.reportData?.map((data, idx) => {
-                    const getScoreClass = (score) => {
-                      if (score >= 80) return 'print-score-high';
-                      if (score >= 60) return 'print-score-medium';
-                      if (score >= 40) return 'print-score-low';
-                      return 'print-score-poor';
-                    };
-                    const getGradeClass = (grade) => {
-                      const gradeMap = {
-                        'A+': 'print-grade-A', 'A': 'print-grade-A',
-                        'B+': 'print-grade-B', 'B': 'print-grade-B',
-                        'C': 'print-grade-C', 'D': 'print-grade-D', 'F': 'print-grade-F'
-                      };
-                      return gradeMap[grade] || 'print-grade-C';
-                    };
-                    const getPerformanceLevel = (score) => {
-                      if (score >= 90) return 'Excellent';
-                      if (score >= 80) return 'Very Good';
-                      if (score >= 70) return 'Good';
-                      if (score >= 60) return 'Satisfactory';
-                      if (score >= 50) return 'Needs Improvement';
-                      return 'Poor';
-                    };
-                    return `
-                      <tr>
-                        <td>${idx + 1}</td>
-                        <td><strong>${data.employeeName}</strong></td>
-                        <td style="text-transform: capitalize;">${data.employeeRole}</td>
-                        <td style="text-align: center;"><strong>${data.attendance.attendancePercentage}%</strong></td>
-                        <td style="text-align: center;">
-                          <strong style="color: #16a34a;">${data.tasks.completedTasks}</strong>/${data.tasks.totalAssigned}
-                        </td>
-                        <td style="text-align: center;">
-                          <strong style="color: #2563eb;">${data.tasks.averageRating}</strong>/5
-                        </td>
-                        <td style="text-align: center;">
-                          <span class="${getScoreClass(data.overallScore)}">${data.overallScore}</span>
-                        </td>
-                        <td style="text-align: center;">
-                          <span class="print-grade ${getGradeClass(data.performanceGrade)}">${data.performanceGrade}</span>
-                        </td>
-                        <td>${getPerformanceLevel(data.overallScore)}</td>
-                      </tr>
-                    `;
-                  }).join('')}
-                </tbody>
-              </table>
-
-              <!-- Footer -->
-              <div class="print-footer">
-                <p>This is a system-generated performance report. For any discrepancies, please contact HR department within 7 days.</p>
-                <p>© ${new Date().getFullYear()} Cystas Devsoft Private Limited. All rights reserved.</p>
-              </div>
-              
-              <div class="print-signature">
-                <div class="print-signature-box">
-                  <div class="print-signature-line"></div>
-                  <p><strong>Authorized Signatory</strong></p>
-                  <p style="font-size: 10px;">HR Department, Cystas Devsoft Pvt Ltd</p>
-                </div>
+              <div class="generated-date">
+                Generated on: ${format(new Date(), 'MMMM dd, yyyy')}
               </div>
             </div>
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.print();
-      printWindow.close();
-    }
+
+            <!-- Report Header -->
+            <div class="print-header">
+              <h2>${generatedReport?.title || 'Performance Evaluation Report'}</h2>
+              <p class="period">
+                Reporting Period: ${generatedReport?.period ? format(new Date(generatedReport.period.startDate), 'MMMM dd, yyyy') : 'N/A'} - ${generatedReport?.period ? format(new Date(generatedReport.period.endDate), 'MMMM dd, yyyy') : 'N/A'}
+              </p>
+              <span class="status ${generatedReport?.status === 'published' ? 'print-status-published' : 'print-status-draft'}">
+                Status: ${generatedReport?.status?.toUpperCase() || 'DRAFT'}
+              </span>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="print-stats-grid">
+              <div class="print-stat-card print-stat-blue">
+                <div class="stat-value">${generatedReport?.reportData?.length || 0}</div>
+                <div class="stat-label">Total Employees</div>
+              </div>
+              <div class="print-stat-card print-stat-green">
+                <div class="stat-value">${generatedReport?.reportData?.length > 0 ? Math.round(generatedReport.reportData.reduce((sum, d) => sum + (d.attendance.attendancePercentage || 0), 0) / generatedReport.reportData.length) : 0}%</div>
+                <div class="stat-label">Average Attendance</div>
+              </div>
+              <div class="print-stat-card print-stat-purple">
+                <div class="stat-value">${generatedReport?.reportData?.length > 0 ? Math.round(generatedReport.reportData.reduce((sum, d) => sum + (d.overallScore || 0), 0) / generatedReport.reportData.length) : 0}</div>
+                <div class="stat-label">Average Overall Score</div>
+              </div>
+              <div class="print-stat-card print-stat-orange">
+                <div class="stat-value">${generatedReport?.reportData?.filter(d => d.performanceGrade === 'A+' || d.performanceGrade === 'A').length || 0}</div>
+                <div class="stat-label">Top Performers</div>
+              </div>
+            </div>
+
+            <!-- Data Table -->
+            <table class="print-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Employee Name</th>
+                  <th>Role</th>
+                  <th>Attendance</th>
+                  <th>Tasks</th>
+                  <th>Rating</th>
+                  <th>Score</th>
+                  <th>Grade</th>
+                  <th>Level</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${generatedReport?.reportData?.map((data, idx) => {
+                  return `
+                    <tr>
+                      <td>${idx + 1}</td>
+                      <td><strong>${data.employeeName}</strong></td>
+                      <td style="text-transform: capitalize;">${data.employeeRole}</td>
+                      <td style="text-align: center;"><strong>${data.attendance.attendancePercentage}%</strong></td>
+                      <td style="text-align: center;">
+                        <strong style="color: #16a34a;">${data.tasks.completedTasks}</strong>/${data.tasks.totalAssigned}
+                      </td>
+                      <td style="text-align: center;">
+                        <strong style="color: #2563eb;">${data.tasks.averageRating}</strong>/5
+                      </td>
+                      <td style="text-align: center;">
+                        <span class="${getScoreClass(data.overallScore)}">${data.overallScore}</span>
+                      </td>
+                      <td style="text-align: center;">
+                        <span class="print-grade ${getGradeClass(data.performanceGrade)}">${data.performanceGrade}</span>
+                      </td>
+                      <td>${getPerformanceLevel(data.overallScore)}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+
+            <!-- Footer -->
+            <div class="print-footer">
+              <p>This report is system-generated and requires authorized verification.</p>
+              <p>© ${new Date().getFullYear()} Cystas Devsoft Private Limited. All rights reserved.</p>
+            </div>
+            
+            <div class="print-signature">
+              <div class="print-signature-box">
+                <div class="print-signature-line"></div>
+                <p><strong>Authorized Signature</strong></p>
+                <p style="font-size: 10px;">HR Department, Cystas Devsoft Pvt Ltd</p>
+              </div>
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                setTimeout(function() {
+                  window.close();
+                }, 500);
+              }, 500);
+            };
+          <\/script>
+        </body>
+      </html>
+    `);
+    
+    iframeDoc.close();
+    iframe.contentWindow.focus();
   };
 
   const getGradeColor = (grade) => {
@@ -693,10 +724,10 @@ const PerformanceReportGenerator = () => {
           {generatedReport && (
             <div id="report-content" className="bg-white">
               {/* Letterhead Header */}
-              <div className="bg-gradient-to-r from-[#0f2027] via-[#203a43] to-[#2c5364] text-white p-8 text-center">
-                <h1 className="text-3xl font-bold mb-2">CYSTAS DEVSOFT PRIVATE LIMITED</h1>
-                <p className="text-sm text-blue-200">CIN: U62090UT2025PTC019363</p>
-                <p className="text-xs text-blue-200 mt-2 max-w-2xl mx-auto">
+              <div className="bg-gradient-to-r from-[#0f2027] via-[#203a43] to-[#2c5364] text-white p-6 sm:p-8 text-center">
+                <h1 className="text-2xl sm:text-3xl font-bold mb-2">CYSTAS DEVSOFT PRIVATE LIMITED</h1>
+                <p className="text-xs sm:text-sm text-blue-200">CIN: U62090UT2025PTC019363</p>
+                <p className="text-xs text-blue-200 mt-2 max-w-2xl mx-auto px-4">
                   Regd. Off:- C/o Bhuvan Chandra Maithani, Makku, Makkumath, Makoomath, Okhimath, Rudraprayag, Uttarakhand - 246419, India.
                 </p>
                 <p className="text-xs text-blue-200 mt-1">Email: cystasdevsoft@gmail.com</p>
@@ -707,10 +738,10 @@ const PerformanceReportGenerator = () => {
               </div>
 
               {/* Report Header */}
-              <div className="p-8 border-b border-gray-200">
+              <div className="p-4 sm:p-8 border-b border-gray-200">
                 <div className="text-center mb-6">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-2">{generatedReport.title}</h2>
-                  <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-600 mt-3">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">{generatedReport.title}</h2>
+                  <div className="flex flex-wrap justify-center gap-3 sm:gap-6 text-xs sm:text-sm text-gray-600 mt-3">
                     <div>
                       <span className="font-semibold">Reporting Period:</span> {format(new Date(generatedReport.period.startDate), 'MMMM dd, yyyy')} - {format(new Date(generatedReport.period.endDate), 'MMMM dd, yyyy')}
                     </div>
@@ -729,72 +760,72 @@ const PerformanceReportGenerator = () => {
               </div>
 
               {/* Summary Stats */}
-              <div className="p-8">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                  <div className="bg-blue-50 p-4 rounded-lg text-center">
-                    <div className="text-2xl font-bold text-blue-600">{generatedReport.reportData.length}</div>
-                    <div className="text-sm text-gray-600">Total Employees</div>
+              <div className="p-4 sm:p-8">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+                  <div className="bg-blue-50 p-3 sm:p-4 rounded-lg text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-blue-600">{generatedReport.reportData.length}</div>
+                    <div className="text-xs sm:text-sm text-gray-600">Total Employees</div>
                   </div>
-                  <div className="bg-green-50 p-4 rounded-lg text-center">
-                    <div className="text-2xl font-bold text-green-600">
+                  <div className="bg-green-50 p-3 sm:p-4 rounded-lg text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-green-600">
                       {generatedReport.reportData.length > 0 ? Math.round(generatedReport.reportData.reduce((sum, d) => sum + (d.attendance.attendancePercentage || 0), 0) / generatedReport.reportData.length) : 0}%
                     </div>
-                    <div className="text-sm text-gray-600">Average Attendance</div>
+                    <div className="text-xs sm:text-sm text-gray-600">Average Attendance</div>
                   </div>
-                  <div className="bg-purple-50 p-4 rounded-lg text-center">
-                    <div className="text-2xl font-bold text-purple-600">
+                  <div className="bg-purple-50 p-3 sm:p-4 rounded-lg text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-purple-600">
                       {generatedReport.reportData.length > 0 ? Math.round(generatedReport.reportData.reduce((sum, d) => sum + (d.overallScore || 0), 0) / generatedReport.reportData.length) : 0}
                     </div>
-                    <div className="text-sm text-gray-600">Average Overall Score</div>
+                    <div className="text-xs sm:text-sm text-gray-600">Average Overall Score</div>
                   </div>
-                  <div className="bg-orange-50 p-4 rounded-lg text-center">
-                    <div className="text-2xl font-bold text-orange-600">
+                  <div className="bg-orange-50 p-3 sm:p-4 rounded-lg text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-orange-600">
                       {generatedReport.reportData.filter(d => d.performanceGrade === 'A+' || d.performanceGrade === 'A').length}
                     </div>
-                    <div className="text-sm text-gray-600">Top Performers (A Grade)</div>
+                    <div className="text-xs sm:text-sm text-gray-600">Top Performers</div>
                   </div>
                 </div>
 
-                {/* Data Table */}
+                {/* Data Table - Responsive */}
                 <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border border-gray-200">
+                  <table className="w-full border-collapse border border-gray-200 text-xs sm:text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-3 border border-gray-200 text-left text-sm font-semibold text-gray-700">#</th>
-                        <th className="px-4 py-3 border border-gray-200 text-left text-sm font-semibold text-gray-700">Employee Name</th>
-                        <th className="px-4 py-3 border border-gray-200 text-left text-sm font-semibold text-gray-700">Role</th>
-                        <th className="px-4 py-3 border border-gray-200 text-center text-sm font-semibold text-gray-700">Attendance</th>
-                        <th className="px-4 py-3 border border-gray-200 text-center text-sm font-semibold text-gray-700">Tasks (C/T)</th>
-                        <th className="px-4 py-3 border border-gray-200 text-center text-sm font-semibold text-gray-700">Avg Rating</th>
-                        <th className="px-4 py-3 border border-gray-200 text-center text-sm font-semibold text-gray-700">Overall Score</th>
-                        <th className="px-4 py-3 border border-gray-200 text-center text-sm font-semibold text-gray-700">Grade</th>
-                        <th className="px-4 py-3 border border-gray-200 text-left text-sm font-semibold text-gray-700">Performance Level</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-200 text-left font-semibold text-gray-700">#</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-200 text-left font-semibold text-gray-700">Employee Name</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-200 text-left font-semibold text-gray-700 hidden sm:table-cell">Role</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-200 text-center font-semibold text-gray-700">Attendance</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-200 text-center font-semibold text-gray-700">Tasks</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-200 text-center font-semibold text-gray-700 hidden md:table-cell">Rating</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-200 text-center font-semibold text-gray-700">Score</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-200 text-center font-semibold text-gray-700">Grade</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-200 text-left font-semibold text-gray-700 hidden lg:table-cell">Level</th>
                       </tr>
                     </thead>
                     <tbody>
                       {generatedReport.reportData.map((data, idx) => (
                         <tr key={idx} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 border border-gray-200 text-sm text-gray-600">{idx + 1}</td>
-                          <td className="px-4 py-3 border border-gray-200 text-sm font-medium text-gray-800">{data.employeeName}</td>
-                          <td className="px-4 py-3 border border-gray-200 text-sm capitalize text-gray-600">{data.employeeRole}</td>
-                          <td className="px-4 py-3 border border-gray-200 text-center text-sm font-semibold text-gray-700">{data.attendance.attendancePercentage}%</td>
-                          <td className="px-4 py-3 border border-gray-200 text-center text-sm">
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-200 text-gray-600">{idx + 1}</td>
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-200 font-medium text-gray-800">{data.employeeName}</td>
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-200 capitalize text-gray-600 hidden sm:table-cell">{data.employeeRole}</td>
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-200 text-center font-semibold text-gray-700">{data.attendance.attendancePercentage}%</td>
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-200 text-center">
                             <span className="font-semibold text-green-600">{data.tasks.completedTasks}</span>
                             <span className="text-gray-400">/{data.tasks.totalAssigned}</span>
                           </td>
-                          <td className="px-4 py-3 border border-gray-200 text-center text-sm">
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-200 text-center hidden md:table-cell">
                             <span className="font-semibold text-blue-600">{data.tasks.averageRating}</span>
                             <span className="text-gray-400">/5</span>
                           </td>
-                          <td className="px-4 py-3 border border-gray-200 text-center">
-                            <span className={`font-bold text-lg ${getScoreClass(data.overallScore)}`}>{data.overallScore}</span>
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-200 text-center">
+                            <span className={`font-bold text-base sm:text-lg ${getScoreClass(data.overallScore)}`}>{data.overallScore}</span>
                           </td>
-                          <td className="px-4 py-3 border border-gray-200 text-center">
-                            <span className={`px-2 py-1 rounded text-sm font-semibold ${getGradeColor(data.performanceGrade)}`}>
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-200 text-center">
+                            <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs sm:text-sm font-semibold ${getGradeColor(data.performanceGrade)}`}>
                               {data.performanceGrade}
                             </span>
                           </td>
-                          <td className="px-4 py-3 border border-gray-200 text-sm text-gray-600">
+                          <td className="px-2 sm:px-4 py-2 sm:py-3 border border-gray-200 text-gray-600 hidden lg:table-cell">
                             {getPerformanceLevel(data.overallScore)}
                           </td>
                         </tr>
@@ -805,15 +836,15 @@ const PerformanceReportGenerator = () => {
               </div>
 
               {/* Footer with Signature */}
-              <div className="bg-gray-50 px-8 py-6 border-t">
-                <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-gray-600 gap-4">
+              <div className="bg-gray-50 px-4 sm:px-8 py-4 sm:py-6 border-t">
+                <div className="flex flex-col sm:flex-row justify-between items-center text-xs sm:text-sm text-gray-600 gap-3 sm:gap-4">
                   <div className="text-center sm:text-left">
                     <p>This report is system-generated and requires authorized verification.</p>
                     <p className="text-xs mt-1">© {new Date().getFullYear()} Cystas Devsoft Private Limited. All rights reserved.</p>
                   </div>
                   <div className="text-center">
                     <p>Authorized Signature</p>
-                    <div className="border-t-2 border-gray-400 w-32 mt-2"></div>
+                    <div className="border-t-2 border-gray-400 w-28 sm:w-32 mt-2 mx-auto sm:mx-0"></div>
                     <p className="text-xs mt-1">HR Department, Cystas Devsoft</p>
                   </div>
                 </div>
@@ -822,7 +853,7 @@ const PerformanceReportGenerator = () => {
           )}
           
           {/* Action Buttons */}
-          <div className="sticky bottom-0 bg-white border-t p-4 flex justify-end gap-3">
+          <div className="sticky bottom-0 bg-white border-t p-3 sm:p-4 flex flex-wrap justify-end gap-2 sm:gap-3">
             <Button onClick={handlePrint} variant="outline" className="bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300">
               <Printer className="h-4 w-4 mr-2" />
               Print Report

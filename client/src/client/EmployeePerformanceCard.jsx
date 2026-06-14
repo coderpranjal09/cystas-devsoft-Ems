@@ -47,15 +47,30 @@ const EmployeePerformanceCard = () => {
   };
 
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
-    const printContent = document.getElementById('performance-report-content').innerHTML;
+    const printContent = document.getElementById('performance-report-content');
     
-    printWindow.document.write(`
+    if (!printContent) {
+      alert('Unable to print. Please try again.');
+      return;
+    }
+
+    // Create an iframe for better cross-device compatibility (works on mobile/tablet)
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+    
+    const iframeDoc = iframe.contentWindow.document;
+    
+    iframeDoc.write(`
       <!DOCTYPE html>
       <html>
         <head>
           <title>${selectedReport?.title || 'Performance Report'} - Cystas Devsoft</title>
           <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
             * {
               margin: 0;
@@ -305,15 +320,24 @@ const EmployeePerformanceCard = () => {
         </head>
         <body>
           <div class="report-container">
-            ${printContent}
+            ${printContent.innerHTML}
           </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                setTimeout(function() {
+                  window.close();
+                }, 500);
+              }, 500);
+            };
+          <\/script>
         </body>
       </html>
     `);
     
-    printWindow.document.close();
-    printWindow.print();
-    printWindow.close();
+    iframeDoc.close();
+    iframe.contentWindow.focus();
   };
 
   const getGradeColor = (grade) => {
@@ -385,34 +409,34 @@ const EmployeePerformanceCard = () => {
 
   return (
     <div className="space-y-6">
-     {/* Report Selector - Responsive Grid */}
-<Card className="bg-gray-800 border-gray-700">
-  <CardHeader>
-    <CardTitle className="text-white">Select Report</CardTitle>
-  </CardHeader>
-  <CardContent>
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-      {reports.map((report, index) => (
-        <button
-          key={report.reportId || index}
-          onClick={() => setSelectedReport(report)}
-          className={`px-3 py-2 rounded-lg border transition-all text-center ${
-            selectedReport?.reportId === report.reportId
-              ? 'bg-green-600 text-white border-green-600'
-              : 'bg-gray-700 text-gray-300 border-gray-600 hover:border-green-500 hover:bg-gray-600'
-          }`}
-        >
-          <div className="text-sm font-medium truncate">
-            {report.title || `Report ${index + 1}`}
+      {/* Report Selector - Responsive Grid */}
+      <Card className="bg-gray-800 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white">Select Report</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {reports.map((report, index) => (
+              <button
+                key={report.reportId || index}
+                onClick={() => setSelectedReport(report)}
+                className={`px-3 py-2 rounded-lg border transition-all text-center ${
+                  selectedReport?.reportId === report.reportId
+                    ? 'bg-green-600 text-white border-green-600'
+                    : 'bg-gray-700 text-gray-300 border-gray-600 hover:border-green-500 hover:bg-gray-600'
+                }`}
+              >
+                <div className="text-sm font-medium truncate">
+                  {report.title || `Report ${index + 1}`}
+                </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  {report.period ? format(new Date(report.period.startDate), 'MMM yyyy') : ''}
+                </div>
+              </button>
+            ))}
           </div>
-          <div className="text-xs text-gray-400 mt-1">
-            {report.period ? format(new Date(report.period.startDate), 'MMM yyyy') : ''}
-          </div>
-        </button>
-      ))}
-    </div>
-  </CardContent>
-</Card>
+        </CardContent>
+      </Card>
 
       {selectedReport && (
         <>
@@ -492,7 +516,7 @@ const EmployeePerformanceCard = () => {
                       <th>Task Title</th>
                       <th>Rating</th>
                       <th>Feedback</th>
-                      <th>Submission Date</th> 
+                      <th>Submission Date</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -623,8 +647,8 @@ const EmployeePerformanceCard = () => {
                           <td className="px-2 sm:px-4 py-2 text-gray-300 border border-gray-700 hidden sm:table-cell break-words max-w-[200px]">{task.feedback || '—'}</td>
                           <td className="px-2 sm:px-4 py-2 text-gray-300 text-center border border-gray-700 whitespace-nowrap">
                             {format(new Date(task.submittedAt), 'MMM dd, yyyy')}
-                          </td>
-                        </tr>
+                           </td>
+                         </tr>
                       ))}
                     </tbody>
                   </table>
